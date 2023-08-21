@@ -1,0 +1,67 @@
+---
+- name: update drac to latest firmware version
+  hosts: drac
+  gather_facts: false
+  become: false
+
+  tasks:
+    - name: Check known_hosts for {{ inventory_hostname }}
+      local_action: shell ssh-keygen -F {{ inventory_hostname }}
+      register: has_entry_in_known_hosts_file
+      changed_when: false
+      ignore_errors: true
+
+    - name: Ignore host key for {{ inventory_hostname }} on first run
+      when: has_entry_in_known_hosts_file.rc == 1
+      set_fact:
+        ansible_ssh_common_args: "-o StrictHostKeyChecking=no"
+
+    - name: install pip
+      package:
+        name: python3-pip
+        state: latest
+      delegate_to: 127.0.0.1
+      run_once: true
+      become: true
+
+    - name: install omsdk
+      ansible.builtin.pip:
+        name: omsdk
+      run_once: true
+      delegate_to: 127.0.0.1
+
+    - name: Get system inventory
+      dellemc.openmanage.idrac_system_info:
+        idrac_ip: "{{ inventory_hostname }}"
+        idrac_user: "{{ idrac_user }}"
+        idrac_password: "{{ idrac_user }}"
+        validate_certs: false
+      delegate_to: 127.0.0.1
+      register: system_info
+
+    - name: Get installed firmware inventory
+      dellemc.openmanage.idrac_firmware_info:
+        idrac_ip: "{{ inventory_hostname }}"
+        idrac_user: "{{ idrac_user }}"
+        idrac_password: "{{ idrac_user }}"
+        validate_certs: false
+      delegate_to: 127.0.0.1
+      register: firmware_info
+
+    - name: Update firmware from repository
+      dellemc.openmanage.idrac_firmware:
+        idrac_ip: "{{ inventory_hostname }}"
+        idrac_user: "{{ idrac_user }}"
+        idrac_password: "{{ idrac_user }}"
+        share_name: "https://downloads.dell.com"
+        reboot: True
+        job_wait: True
+        apply_update: True
+        validate_certs: false
+      delegate_to: 127.0.0.1
+      register: firmware
+
+    - debug:
+        var: firmware
+
+...

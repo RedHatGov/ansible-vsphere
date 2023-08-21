@@ -1,0 +1,20 @@
+---
+
+net_gateway: "1.1.1.1"
+net_netmask: "255.255.255.0"
+
+nfs_clients: "1.2.3.0/24"
+nfs_server: "nfs.server.com"
+nfs_share: "/export"
+
+idrac_user: "drac_user"
+idrac_password: "drac_password"
+
+dns_domain: "server.com"
+dns_ns:
+  - "1.1.1.2"
+  - "1.1.1.3"
+
+user_rootpw: "<encrypted password goes here>"
+
+esxi_iso: "VMware-VMvisor-Installer-7.0U3g-20328353.x86_64.iso"

@@ -1,0 +1,80 @@
+---
+- name: configure nfs on servers
+  hosts: controller
+  gather_facts: false
+  become: true
+
+  tasks:
+    - name: Check known_hosts for {{ inventory_hostname }}
+      local_action: shell ssh-keygen -F {{ inventory_hostname }}
+      register: has_entry_in_known_hosts_file
+      changed_when: false
+      ignore_errors: true
+
+    - name: Ignore host key for {{ inventory_hostname }} on first run
+      when: has_entry_in_known_hosts_file.rc == 1
+      set_fact:
+        ansible_ssh_common_args: "-o StrictHostKeyChecking=no"
+
+    - name: gather facts
+      ansible.builtin.gather_facts:
+
+    - name: install nfs packages
+      package:
+        name: "nfs-utils"
+        state: latest
+
+    - name: enable nfs export selinux boolean
+      ansible.posix.seboolean:
+        name: "nfs_export_all_ro"
+        state: true
+        persistent: true
+
+    - name: configure services
+      ansible.builtin.systemd_service:
+        name: "{{ item }}"
+        enabled: true
+        masked: false
+        state: started
+      with_items:
+        - "rpcbind"
+        - "nfs-server"
+
+    - name: add nfs export directory
+      ansible.builtin.file:
+        path: "/export"
+        state: directory
+        mode: '0755'
+
+    - name: add nfs share configuration
+      ansible.builtin.template:
+        src: "exports.j2"
+        dest: "/etc/exports"
+        mode: '0644'
+      notify:
+      - reload nfs
+
+    - name: configure firewall for nfs
+      ansible.posix.firewalld:
+        service: "{{ item }}"
+        permanent: true
+        state: enabled
+        immediate: true
+      with_items:
+        - "mountd"
+        - "nfs"
+        - "rpc-bind"
+
+    - name: add esxi install iso
+      ansible.builtin.copy:
+        src: "{{ esxi_iso }}"
+        dest: "{{ nfs_share }}/{{ esxi_iso }}"
+        mode: '0644'
+
+  handlers:
+    - name: reload nfs
+      ansible.builtin.systemd_service:
+        name: "nfs-server"
+        state: reloaded
+
+...

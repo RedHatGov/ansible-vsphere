@@ -1,0 +1,7 @@
+{% for host in groups['drac'] %}
+/export {{ host }}(ro,no_root_squash)
+{% endfor %}
+{% for host in groups['esxi'] %}
+/export {{ host }}(ro,no_root_squash)
+{% endfor %}
+/export {{ nfs_clients }}(ro,no_root_squash)

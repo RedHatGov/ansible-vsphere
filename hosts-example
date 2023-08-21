@@ -1,0 +1,15 @@
+[drac]
+server-drac.server.com
+server1-drac.server.com
+server2-drac.server.com
+
+[controller]
+server.server.com
+
+[controller-drac]
+server-drac.server.com
+
+[esxi]
+server.server.com
+server1.server.com
+server2.server.com

@@ -1,0 +1,54 @@
+#Accept the VMware End User License Agreement
+vmaccepteula
+
+# clear paritions and install
+clearpart --firstdisk --overwritevmfs
+install --firstdisk --overwritevmfs
+
+#set the root password
+rootpw --iscrypted {{ user_rootpw }}
+
+#Host Network Settings
+network --bootproto=static --addvmportgroup=1 --ip={{ net_ip }} --netmask={{ net_netmask }} --gateway={{ net_gateway }} --nameserver={{ dns_ns[0] }} --hostname={{ inventory_hostname_short }}
+
+
+reboot
+
+#Firstboot section 1
+%firstboot --interpreter=busybox
+sleep 30
+
+#Enter Maintenance mode
+vim-cmd hostsvc/maintenance_mode_enter
+
+#suppress Shell Warning
+esxcli system settings advanced set -o /UserVars/SuppressShellWarning -i 1
+esxcli system settings advanced set -o /UserVars/ESXiShellTimeOut -i 1
+
+#Add DNS Nameservers to /etc/resolv.conf
+cat > /etc/resolv.conf << \DNS
+search {{ dns_domain }}
+{% for n in range( dns_ns|length ) %}
+nameserver {{ dns_ns[n] }}
+{% endfor %}
+
+#VSwitch Configurations
+esxcli network vswitch standard add --vswitch-name=vSwitch0 --ports=24
+esxcli network vswitch standard uplink add --uplink-name=vmnic0 --vswitch-name=vSwitch0
+#esxcli network vswitch standard uplink add --uplink-name=vmnic1 --vswitch-name=vSwitch0
+#esxcli network vswitch standard uplink add --uplink-name=vmnic2 --vswitch-name=vSwitch0
+#esxcli network vswitch standard uplink add --uplink-name=vmnic3 --vswitch-name=vSwitch0
+#esxcli network vswitch standard policy failover set --active-uplinks=vmnic0,vmnic1,vmnic2,vmnic3 --vswitch-name=vSwitch0
+#esxcli network vswitch standard portgroup policy failover set --portgroup-name="Management Network" --active-uplinks=vmnic0,vmnic1,vmnic2,vmnic3
+esxcli network vswitch standard portgroup add --portgroup-name={{ inventory_hostname_short }}-prod0 --vswitch-name=vSwitch0
+esxcli network vswitch standard portgroup remove --portgroup-name="VM Network" --vswitch-name=vSwitch0
+
+#Firstboot Section 2
+%firstboot --interpreter=busybox
+
+#Disable IPv6
+esxcli network ip set --ipv6-enabled=false
+
+#Reboot
+sleep 30
+reboot
