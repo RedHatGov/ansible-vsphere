@@ -63,13 +63,7 @@
       with_items:
         - "mountd"
         - "nfs"
-        - "rpc-bind"
-
-    - name: add esxi install iso
-      ansible.builtin.copy:
-        src: "{{ esxi_iso }}"
-        dest: "{{ nfs_share }}/{{ esxi_iso }}"
-        mode: '0644'
+        - "rpc-bind"	
 
   handlers:
     - name: reload nfs

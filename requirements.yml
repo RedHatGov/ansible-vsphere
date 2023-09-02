@@ -1,0 +1,6 @@
+---
+
+collections:
+  - ansible.posix
+  - community.vmware
+  - dellemc.openmanage

@@ -23,9 +23,6 @@
       ansible.builtin.gather_facts:
       delegate_to: "{{ groups['controller'][0] }}"
 
-#    - name: generate root password
-#      ansible.builtin.command: openssl passwd -1 "MyPassword"
-
     - name: add esxi kickstart configuration
       ansible.builtin.template:
         src: "kickstart.cfg.j2"
@@ -50,37 +47,50 @@
       set_fact:
         ansible_ssh_common_args: "-o StrictHostKeyChecking=no"
 
-#    - name: reset drac
-#      dellemc.openmanage.idrac_reset:
-#        idrac_ip: "{{ drac }}"
-#        idrac_user: "{{ idrac_user }}"
-#        idrac_password: "{{ idrac_password }}"
-#        validate_certs: false
-#      delegate_to: 127.0.0.1
+    - block:
+      - name: netboot esxi install
+        dellemc.openmanage.idrac_os_deployment:
+          idrac_ip: "{{ drac }}"
+          idrac_user: "{{ idrac_user }}"
+          idrac_password: "{{ idrac_password }}"
+          validate_certs: false
+          share_name: "{{ hostvars[nfs_server]['net_ip'] }}:{{ nfs_share }}"
+          iso_image:  "{{ esxi_iso | regex_replace('\\.iso', '') }}-{{ inventory_hostname_short }}.iso"
+          expose_duration: 60
+        delegate_to: 127.0.0.1
 
-#    - name: Wait for drac to come back
-#      ansible.builtin.wait_for:
-#        port: 443
-#        delay: 120
-#      delegate_to: 127.0.0.1
+      rescue:
 
-    - name: netboot esxi install
-      dellemc.openmanage.idrac_os_deployment:
-        idrac_ip: "{{ drac }}"
-        idrac_user: "{{ idrac_user }}"
-        idrac_password: "{{ idrac_password }}"
-        validate_certs: false
-        share_name: "{{ hostvars[nfs_server]['net_ip'] }}:{{ nfs_share }}"
-        iso_image:  "{{ esxi_iso }}"
-        expose_duration: 60
-      delegate_to: 127.0.0.1
+        - name: reset drac
+          dellemc.openmanage.idrac_reset:
+            idrac_ip: "{{ drac }}"
+            idrac_user: "{{ idrac_user }}"
+            idrac_password: "{{ idrac_password }}"
+            validate_certs: false
+          delegate_to: 127.0.0.1
 
-    - debug:
-        msg: "When the ESXi host boots, type shift-o, and then enter the following:"
+        - name: Wait for drac to come back
+          ansible.builtin.wait_for:
+            host: "{{ drac }}"
+            port: 443
+            delay: 120
+          delegate_to: 127.0.0.1
 
-    - debug:
-        msg: "netdevice=vmnic0 bootproto=dhcp ks=nfs://{{ hostvars[nfs_server]['net_ip'] }}{{ nfs_share }}/kickstart-{{ inventory_hostname_short }}.cfg"
-      delegate_to: 127.0.0.1
+        - name: Sleep for 60 seconds
+          ansible.builtin.wait_for:
+            timeout: 60
+          delegate_to: 127.0.0.1
+
+        - name: netboot esxi install (retry)
+          dellemc.openmanage.idrac_os_deployment:
+            idrac_ip: "{{ drac }}"
+            idrac_user: "{{ idrac_user }}"
+            idrac_password: "{{ idrac_password }}"
+            validate_certs: false
+            share_name: "{{ hostvars[nfs_server]['net_ip'] }}:{{ nfs_share }}"
+            iso_image:  "{{ esxi_iso | regex_replace('\\.iso', '') }}-{{ inventory_hostname_short }}.iso"
+            expose_duration: 60
+          delegate_to: 127.0.0.1
 
   handlers:
     - name: reload nfs
