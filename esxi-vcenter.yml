@@ -1,0 +1,93 @@
+---
+
+- name: configure vcenter
+  hosts: "{{ groups['controller'][0] }}"
+  gather_facts: false
+  become: true
+
+  tasks:
+    - name: Check known_hosts for {{ inventory_hostname }}
+      local_action: shell ssh-keygen -F {{ inventory_hostname }}
+      register: has_entry_in_known_hosts_file
+      changed_when: false
+      ignore_errors: true
+
+    - name: Ignore host key for {{ inventory_hostname }} on first run
+      when: has_entry_in_known_hosts_file.rc == 1
+      set_fact:
+        ansible_ssh_common_args: "-o StrictHostKeyChecking=no"
+
+#    - name: copy vcenter iso to nfs share
+#      ansible.builtin.copy:
+#        src: "{{ vcenter_iso }}"
+#        dest: "{{ nfs_share }}/{{ vcenter_iso }}"
+#
+#    - name: mount vcsa iso
+#      ansible.posix.mount:
+#        path: "/mnt"
+#        src: "{{ nfs_share }}/{{ vcenter_iso }}"
+#        fstype: "iso9660"
+#        state: "ephemeral"
+#
+#    - name: find vcsa file
+#      ansible.builtin.find:
+#        paths: "/mnt/vcsa"
+#        patterns: '*.ova'
+#      register: file_list
+#
+#    - name: copy ova to nfs share
+#      ansible.builtin.copy:
+#        src: "{{ file_list.files[0].path }}"
+#        dest: "{{ nfs_share }}/{{ vcenter_ova }}"
+#        remote_src: true
+#
+#    - name: unmount esxi iso image
+#      ansible.posix.mount:
+#        path: "/mnt"
+#        state: "unmounted"
+
+    - name: deploy vcenter
+      community.vmware.vmware_deploy_ovf:
+        hostname: "{{ vcenter_host }}"
+        username: "{{ esxi_user }}"
+        password: "{{ esxi_pass }}"
+#        esxi_hostname: "{{ vcenter_host_short }}"
+
+        name: "{{ vcenter_name }}"
+        datastore: "{{ vcenter_host_short }}:local"
+        disk_provisioning: "thin"
+#        networks:
+#          "Network 1": "Management Network"
+
+        ovf: "{{ nfs_share }}/{{ vcenter_ova }}"
+#        wait_for_ip_address: true
+        validate_certs: false
+#        inject_ovf_env: true
+#        properties:
+#          DeploymentOption.value: "{{ vcenter_size }}" 
+#          guestinfo.cis.appliance.net.addr.family: "ipv4" 
+#          guestinfo.cis.appliance.net.mode: "static" 
+#          guestinfo.cis.appliance.net.addr: "{{ vcenter_ip }}" 
+#          guestinfo.cis.appliance.net.pnid: "{{ vcenter_fqdn }}"
+#          guestinfo.cis.appliance.net.prefix: "{{ net_prefix }}" 
+#          guestinfo.cis.appliance.net.gateway: "{{ net_gateway }}" 
+#          guestinfo.cis.appliance.net.dns.servers: "{{ dns_ns | join(',') }}" 
+#          guestinfo.cis.appliance.root.passwd: "{{ esxi_pass }}" 
+#          guestinfo.cis.ceip_enabled: "False"
+#          guestinfo.cis.deployment.autoconfig: "True" 
+#          guestinfo.cis.vmdir.password: "{{ esxi_pass }}" 
+#          domain: "{{ dns_domain }}"
+#          searchpath: "{{ dns_domain }}"
+
+    - name: Wait for vCenter
+      community.vmware.vmware_about_info:
+        hostname: "{{ vcenter_address }}"
+        username: "administrator@vsphere.local"
+        password: "{{ esxi_pass }}"
+        validate_certs: no
+      retries: 30
+      delay: 60
+      register: result
+      until: result is succeeded
+
+...
