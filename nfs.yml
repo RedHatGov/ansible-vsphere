@@ -1,6 +1,6 @@
 ---
 - name: configure nfs on servers
-  hosts: controller
+  hosts: "{{ groups['controller'][0] }}"
   gather_facts: false
   become: true
 

@@ -1,0 +1,20 @@
+---
+
+# this updates drac firmware
+#- import_playbook: drac.yml
+# this configures the management host (the controller, usually) to manage vsphere
+- import_playbook: mgmt-config.yml
+# this creates and populates the nfs server on the management host
+- import_playbook: nfs.yml
+# this creates the custom esxi installation isos with custom kickstarts
+- import_playbook: iso.yml
+##################################################
+# ONLY RUN THIS WHEN YOU WANT TO WIPE YOUR SERVERS
+#- import_playbook: esxi-provision.yml
+##################################################
+# this configures the provisioned esxi hosts
+- import_playbook: esxi-config.yml
+# this deploys and configures vcenter and creates the datacenter and cluster
+- import_playbook: esxi-vcenter.yml
+
+...

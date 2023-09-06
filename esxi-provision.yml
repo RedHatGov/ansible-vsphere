@@ -27,7 +27,7 @@
           share_name: "{{ hostvars[nfs_server]['net_ip'] }}:{{ nfs_share }}"
           iso_image:  "{{ esxi_iso | regex_replace('\\.iso', '') }}-{{ inventory_hostname_short }}.iso"
           expose_duration: 60
-        delegate_to: 127.0.0.1
+        delegate_to: "{{ groups['controller'][0] }}"
 
       rescue:
 
@@ -37,19 +37,19 @@
             idrac_user: "{{ idrac_user }}"
             idrac_password: "{{ idrac_password }}"
             validate_certs: false
-          delegate_to: 127.0.0.1
+          delegate_to: "{{ groups['controller'][0] }}"
 
         - name: Wait for drac to come back
           ansible.builtin.wait_for:
             host: "{{ drac }}"
             port: 443
             delay: 120
-          delegate_to: 127.0.0.1
+          delegate_to: "{{ groups['controller'][0] }}"
 
         - name: Sleep for 60 seconds
           ansible.builtin.wait_for:
             timeout: 60
-          delegate_to: 127.0.0.1
+          delegate_to: "{{ groups['controller'][0] }}"
 
         - name: netboot esxi install (retry)
           dellemc.openmanage.idrac_os_deployment:
@@ -60,12 +60,6 @@
             share_name: "{{ hostvars[nfs_server]['net_ip'] }}:{{ nfs_share }}"
             iso_image:  "{{ esxi_iso | regex_replace('\\.iso', '') }}-{{ inventory_hostname_short }}.iso"
             expose_duration: 60
-          delegate_to: 127.0.0.1
-
-  handlers:
-    - name: reload nfs
-      ansible.builtin.systemd_service:
-        name: "nfs-server"
-        state: reloaded
+          delegate_to: "{{ groups['controller'][0] }}"
 
 ...

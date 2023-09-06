@@ -91,24 +91,4 @@
 
       delegate_to: "{{ groups['controller'][0] }}"
 
-#    - name: modify boot.cfg for each esxi server
-#      ansible.builtin.replace:
-#        path: "{{ item }}"
-##        after: "^kernel=\/b.b00$"
-#        regexp: "^kernelopt=runweasel.*"
-##        replace: "kernelopt=runweasel netdevice=vmnic0 bootproto=dhcp ks=nfs://{{ hostvars[nfs_server]['net_ip'] }}{{ nfs_share }}/kickstart-{{ inventory_hostname_short }}.cfg"
-#        replace: "kernelopt=runweasel ks=cdrom:/ks.cfg"
-#      loop:
-#        - "{{ nfs_share }}/{{ esxi_iso }}.{{ inventory_hostname }}/mnt/boot.cfg"
-#        - "{{ nfs_share }}/{{ esxi_iso }}.{{ inventory_hostname }}/mnt/efi/boot/boot.cfg"
-#      delegate_to: "{{ groups['controller'][0] }}"
-#
-#    - name: remake iso images
-#      ansible.builtin.command: "genisoimage -relaxed-filenames -J -R -o {{ nfs_share }}/{{ esxi_iso | regex_replace('.iso', '') }}-{{ inventory_hostname_short }}.iso -b isolinux.bin -c boot.cat -no-emul-boot -boot-load-size 4 -boot-info-table -eltorito-alt-boot -e efiboot.img -no-emul-boot {{ nfs_share }}/{{ esxi_iso }}.{{ inventory_hostname }}/mnt"
-#      delegate_to: "{{ groups['controller'][0] }}"
-#      register: result
-
-#    - debug:
-#        var: result
-
 ...
