@@ -1,7 +1,10 @@
 ---
 
+##################################################
 # this updates drac firmware
-#- import_playbook: drac.yml
+- import_playbook: drac.yml
+  when: drac is defined
+##################################################
 # this configures the management host (the controller, usually) to manage vsphere
 - import_playbook: mgmt-config.yml
 # this creates and populates the nfs server on the management host
@@ -10,7 +13,8 @@
 - import_playbook: iso.yml
 ##################################################
 # ONLY RUN THIS WHEN YOU WANT TO WIPE YOUR SERVERS
-#- import_playbook: esxi-provision.yml
+- import_playbook: esxi-provision.yml
+  when: wipe is defined
 ##################################################
 # this configures the provisioned esxi hosts
 - import_playbook: esxi-config.yml

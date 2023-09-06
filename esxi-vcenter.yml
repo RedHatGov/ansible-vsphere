@@ -53,8 +53,8 @@
         password: "{{ esxi_pass }}"
 
         name: "{{ vcenter_name }}"
-#        datastore: "{{ vcenter_host_short }}:local"
-        datastore: "{{ nfs_name }}"
+        datastore: "{{ vcenter_host_short }}:local"
+#        datastore: "{{ nfs_name }}"
         disk_provisioning: "thin"
 
         ovf: "{{ nfs_share }}/{{ vcenter_ova }}"
@@ -98,17 +98,6 @@
         license: "{{ vcenter_license }}"
         state: present
 
-    - name: Add ESXi license and assign to the ESXi host
-      community.vmware.vcenter_license:
-        hostname: "{{ vcenter_fqdn }}"
-        username: "administrator@vsphere.local"
-        password: "{{ esxi_pass }}"
-        validate_certs: false
-        esxi_hostname: '{{ item }}'
-        license: "{{ esxi_license }}"
-        state: present
-      loop: "{{ groups['esxi'] }}"
-
     - name: Create Datacenter
       community.vmware.vmware_datacenter:
         hostname: "{{ vcenter_fqdn }}"
@@ -138,6 +127,17 @@
         esxi_hostname: "{{ item }}"
         esxi_username: '{{ esxi_user }}'
         esxi_password: '{{ esxi_pass }}'
+        state: present
+      loop: "{{ groups['esxi'] }}"
+
+    - name: Add ESXi license and assign to the ESXi host
+      community.vmware.vcenter_license:
+        hostname: "{{ vcenter_fqdn }}"
+        username: "administrator@vsphere.local"
+        password: "{{ esxi_pass }}"
+        validate_certs: false
+        esxi_hostname: '{{ item }}'
+        license: "{{ esxi_license }}"
         state: present
       loop: "{{ groups['esxi'] }}"
 

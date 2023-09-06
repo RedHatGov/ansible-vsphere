@@ -1,7 +1,7 @@
 vmaccepteula
 install --disk={{ install_hdd }} --overwritevmfs --novmfsondisk
 
-clearpart --drives={{ vmfs_hdd }}
+clearpart --drives={{ vmfs_hdd }} --overwritevmfs
 part {{ inventory_hostname_short }}:local --ondisk={{ vmfs_hdd }}
 
 network --bootproto=static --ip={{ net_ip }} --netmask={{ net_netmask }} --gateway={{ net_gateway }} --nameserver={{ dns_ns[0] }} --hostname={{ inventory_hostname_short }}

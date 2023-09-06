@@ -23,6 +23,13 @@
       ansible.builtin.gather_facts:
       delegate_to: "{{ groups['controller'][0] }}"
 
+    - name: Wait for esxi hosts to come back
+      ansible.builtin.wait_for:
+        host: "{{ inventory_hostname }}"
+        port: 443
+        timeout: 600
+      delegate_to: "{{ groups['controller'][0] }}"
+
     - name: Gather info about vmnics of an ESXi Host
       community.vmware.vmware_host_vmnic_info:
         hostname: '{{ inventory_hostname }}'
