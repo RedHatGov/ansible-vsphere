@@ -1,0 +1,38 @@
+---
+
+- name: configure management host
+  hosts: "{{ groups['controller'][0] }}"
+  gather_facts: false
+  become: true
+
+  tasks:
+    - name: Check known_hosts for {{ inventory_hostname }}
+      local_action: shell ssh-keygen -F {{ inventory_hostname }}
+      register: has_entry_in_known_hosts_file
+      changed_when: false
+      ignore_errors: true
+
+    - name: Ignore host key for {{ inventory_hostname }} on first run
+      when: has_entry_in_known_hosts_file.rc == 1
+      set_fact:
+        ansible_ssh_common_args: "-o StrictHostKeyChecking=no"
+
+    - name: gather facts
+      ansible.builtin.gather_facts:
+
+    - name: install epel key
+      ansible.builtin.rpm_key:
+        state: present
+        key: "https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-{{ ansible_distribution_major_version }}"
+
+    - name: install epel package
+      ansible.builtin.yum:
+        name: "https://dl.fedoraproject.org/pub/epel/epel-release-latest-{{ ansible_distribution_major_version }}.noarch.rpm"
+        state: present
+
+    - name: install python pyvmomi for vmware management
+      ansible.builtin.package:
+        name: python3-pyvmomi
+        state: latest
+
+...

@@ -1,3 +1,7 @@
+**/*.json
+**/*.log
+**/*.swo
+**/*.swp
 group_vars/all.yml
 host_vars/*.com
 hosts

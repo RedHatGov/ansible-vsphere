@@ -42,6 +42,12 @@
           ansible.builtin.file:
             path: "/dev/shm/esxibuilder/{{ inventory_hostname_short }}/isobuild"
             state: directory
+
+        - name: add esxi kickstart configuration
+          ansible.builtin.template:
+            src: "kickstart.cfg.j2"
+            dest: "/export/kickstart-{{ inventory_hostname_short }}.cfg"
+            mode: '0644'
   
         - name: copy kickstart
           ansible.builtin.copy:

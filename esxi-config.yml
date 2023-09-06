@@ -23,27 +23,6 @@
       ansible.builtin.gather_facts:
       delegate_to: "{{ groups['controller'][0] }}"
 
-    - name: install epel key
-      ansible.builtin.rpm_key:
-        state: present
-        key: "https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-{{ ansible_distribution_major_version }}"
-      delegate_to: "{{ groups['controller'][0] }}"
-      run_once: true
-
-    - name: install epel package
-      ansible.builtin.yum:
-        name: "https://dl.fedoraproject.org/pub/epel/epel-release-latest-{{ ansible_distribution_major_version }}.noarch.rpm"
-        state: present
-      delegate_to: "{{ groups['controller'][0] }}"
-      run_once: true
-
-    - name: install python pyvmomi for vmware management
-      ansible.builtin.package:
-        name: python3-pyvmomi
-        state: latest
-      delegate_to: "{{ groups['controller'][0] }}"
-      run_once: true
-
     - name: Gather info about vmnics of an ESXi Host
       community.vmware.vmware_host_vmnic_info:
         hostname: '{{ inventory_hostname }}'
@@ -111,5 +90,23 @@
         enable_vsan: true
         validate_certs: false
       delegate_to: "{{ groups['controller'][0] }}"
+
+    - name: Mount NFS v4.1 datastores to ESXi
+      community.vmware.vmware_host_datastore:
+        hostname: "{{ inventory_hostname }}"
+        username: "{{ esxi_user }}"
+        password: "{{ esxi_pass }}"
+        validate_certs: false
+        datastore_name: '{{ item.name }}'
+        datastore_type: '{{ item.type }}'
+        nfs_server: '{{ item.server }}'
+        nfs_path: '{{ item.path }}'
+        nfs_ro: false
+        esxi_hostname: '{{ inventory_hostname }}'
+        state: present
+      loop:
+          - { 'name': "{{ nfs_name }}", 'server': "{{ nfs_server }}", 'path': "{{ nfs_share }}", 'type': 'nfs41'}
+      delegate_to: "{{ groups['controller'][0] }}"
+
 
 ...

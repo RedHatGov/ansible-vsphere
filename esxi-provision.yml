@@ -1,35 +1,5 @@
 ---
 
-- name: configure esxi kickstarts
-  hosts: esxi
-  gather_facts: false
-  become: true
-
-  tasks:
-    - name: Check known_hosts for {{ inventory_hostname }}
-      local_action: shell ssh-keygen -F {{ inventory_hostname }}
-      register: has_entry_in_known_hosts_file
-      changed_when: false
-      ignore_errors: true
-      delegate_to: "{{ groups['controller'][0] }}"
-
-    - name: Ignore host key for {{ inventory_hostname }} on first run
-      when: has_entry_in_known_hosts_file.rc == 1
-      set_fact:
-        ansible_ssh_common_args: "-o StrictHostKeyChecking=no"
-      delegate_to: "{{ groups['controller'][0] }}"
-
-    - name: gather facts
-      ansible.builtin.gather_facts:
-      delegate_to: "{{ groups['controller'][0] }}"
-
-    - name: add esxi kickstart configuration
-      ansible.builtin.template:
-        src: "kickstart.cfg.j2"
-        dest: "/export/kickstart-{{ inventory_hostname_short }}.cfg"
-        mode: '0644'
-      delegate_to: "{{ groups['controller'][0] }}"
-
 - name: configure esxi servers
   hosts: esxi
   gather_facts: false
