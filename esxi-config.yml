@@ -23,11 +23,20 @@
       ansible.builtin.gather_facts:
       delegate_to: "{{ groups['controller'][0] }}"
 
+    - debug:
+        msg: "*** IMPORTANT ***: It will take up to 15 minutes for the ESXi build to complete. Please be patient."
+      run_once: true
+
     - name: Wait for esxi hosts to come back
       ansible.builtin.wait_for:
         host: "{{ inventory_hostname }}"
         port: 443
-        timeout: 600
+        timeout: 900
+      delegate_to: "{{ groups['controller'][0] }}"
+
+    - name: Delay to give settle time
+      ansible.builtin.wait_for:
+        timeout: 60
       delegate_to: "{{ groups['controller'][0] }}"
 
     - name: Gather info about vmnics of an ESXi Host
