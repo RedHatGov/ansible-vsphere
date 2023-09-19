@@ -2,3 +2,10 @@
 
 net_ip: "1.1.1.4"
 drac: "server-drac.server.com"
+install_hdd: "naa.61866da06192eb002c5a79af0c7fa9c7"
+vmfs_hdd: "naa.61866da06192eb002c5a79b00c8b5f5c"
+net_ip: "1.1.2.6"
+vmnet_ip: "1.1.1.6"
+vmnet_mac: "01:23:45:ab:cd:ef"
+
+...
