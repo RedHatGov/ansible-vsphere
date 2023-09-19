@@ -6,22 +6,10 @@
   become: true
 
   tasks:
-    - name: Check known_hosts for {{ inventory_hostname }}
-      local_action: shell ssh-keygen -F {{ inventory_hostname }}
-      register: has_entry_in_known_hosts_file
-      changed_when: false
-      ignore_errors: true
-      delegate_to: "{{ groups['controller'][0] }}"
-
-    - name: Ignore host key for {{ inventory_hostname }} on first run
-      when: has_entry_in_known_hosts_file.rc == 1
-      set_fact:
-        ansible_ssh_common_args: "-o StrictHostKeyChecking=no"
-      delegate_to: "{{ groups['controller'][0] }}"
-
-    - name: gather facts
-      ansible.builtin.gather_facts:
-      delegate_to: "{{ groups['controller'][0] }}"
+    - include_role:
+        name: ssh_fingerprint_connect
+        apply:
+          delegate_to: "{{ groups['controller'][0] }}"
 
     - debug:
         msg: "*** IMPORTANT ***: It will take up to 15 minutes for the ESXi build to complete. Please be patient."
@@ -31,7 +19,7 @@
       ansible.builtin.wait_for:
         host: "{{ inventory_hostname }}"
         port: 443
-        timeout: 900
+        timeout: 1200
       delegate_to: "{{ groups['controller'][0] }}"
 
     - name: Delay to give settle time

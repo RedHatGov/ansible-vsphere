@@ -1,0 +1,80 @@
+---
+# tasks file for iso
+
+- name: regnerate iso images
+  block:
+
+    - name: install mkisofs
+      package:
+        name: "xorriso"
+        state: latest
+
+    - name: add esxi install iso
+      ansible.builtin.copy:
+        src: "{{ esxi_iso }}"
+        dest: "{{ nfs_share }}/{{ esxi_iso }}"
+        mode: '0644'
+
+    - name: mount esxi iso image
+      ansible.posix.mount:
+        path: "/mnt"
+        src: "{{ nfs_share }}/{{ esxi_iso }}"
+        fstype: "iso9660"
+        state: "ephemeral"
+      run_once: true
+
+    - name: create working directory
+      ansible.builtin.file:
+        path: "/dev/shm/esxibuilder/{{ inventory_hostname_short }}/isobuild"
+        state: directory
+
+    - name: add esxi kickstart configuration
+      ansible.builtin.template:
+        src: "kickstart.cfg.j2"
+        dest: "/export/kickstart-{{ inventory_hostname_short }}.cfg"
+        mode: '0644'
+
+    - name: copy kickstart
+      ansible.builtin.copy:
+        src: "{{ nfs_share }}/kickstart-{{ inventory_hostname_short }}.cfg"
+        dest: "/dev/shm/esxibuilder/{{ inventory_hostname_short }}/isobuild/KS.cfg"
+        remote_src: true
+
+    - name: copy cd contents to new folder
+      ansible.builtin.shell: "cd /mnt; tar cf - . | (cd /dev/shm/esxibuilder/{{ inventory_hostname_short }}/isobuild; tar xfp -)"
+
+    - name: unmount esxi iso image
+      ansible.posix.mount:
+        path: "/mnt"
+        state: "unmounted"
+      run_once: true
+
+    - name: set permissions on files
+      ansible.builtin.file:
+        path: "/dev/shm/esxibuilder/{{ inventory_hostname_short }}/isobuild/{{ item }}"
+        state: touch
+        mode: +x
+      loop:
+        - "boot.cfg"
+        - "efi/boot/boot.cfg"
+
+    - name: modify boot config files
+      ansible.builtin.replace:
+        path: "/dev/shm/esxibuilder/{{ inventory_hostname_short }}/isobuild/{{ item }}"
+        regexp: "cdromBoot"
+        replace: "ks=cdrom:/KS.CFG"
+      loop:
+        - "boot.cfg"
+        - "efi/boot/boot.cfg"
+
+    - name: set new iso name
+      set_fact:
+        esxi_new_iso: "{{ esxi_iso | regex_replace('\\.iso', '') }}"
+
+    - name: regenerate iso image
+      ansible.builtin.shell: "cd /dev/shm/esxibuilder; genisoimage -relaxed-filenames -J -R -o {{ nfs_share }}/{{ esxi_new_iso }}-{{ inventory_hostname_short }}.iso -b isolinux.bin -c boot.cat -no-emul-boot -boot-load-size 4 -boot-info-table -eltorito-alt-boot -eltorito-boot efiboot.img -quiet --no-emul-boot /dev/shm/esxibuilder/{{ inventory_hostname_short }}/isobuild"
+
+  delegate_to: "{{ groups['controller'][0] }}"
+
+...
+

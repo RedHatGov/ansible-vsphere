@@ -1,0 +1,7 @@
+---
+# handlers file for nfs
+
+- name: reload nfs
+  ansible.builtin.systemd_service:
+    name: "nfs-server"
+    state: reloaded

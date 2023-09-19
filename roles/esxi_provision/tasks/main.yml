@@ -1,0 +1,63 @@
+---
+# tasks file for esxi_provision
+
+- name: install pip
+  package:
+    name: python3-pip
+    state: latest
+  run_once: true
+  delegate_to: "{{ groups['controller'][0] }}"
+  become: true
+  
+- name: install omsdk
+  ansible.builtin.pip:
+    name: omsdk
+  run_once: true
+  delegate_to: "{{ groups['controller'][0] }}"
+
+- block:
+  - name: netboot esxi install
+    dellemc.openmanage.idrac_os_deployment:
+      idrac_ip: "{{ drac }}"
+      idrac_user: "{{ idrac_user }}"
+      idrac_password: "{{ idrac_password }}"
+      validate_certs: false
+      share_name: "{{ hostvars[nfs_server]['net_ip'] }}:{{ nfs_share }}"
+      iso_image:  "{{ esxi_iso | regex_replace('\\.iso', '') }}-{{ inventory_hostname_short }}.iso"
+      expose_duration: 60
+    delegate_to: "{{ groups['controller'][0] }}"
+
+  rescue:
+
+  - name: reset drac
+    dellemc.openmanage.idrac_reset:
+      idrac_ip: "{{ drac }}"
+      idrac_user: "{{ idrac_user }}"
+      idrac_password: "{{ idrac_password }}"
+      validate_certs: false
+    delegate_to: "{{ groups['controller'][0] }}"
+
+  - name: Wait for drac to come back
+    ansible.builtin.wait_for:
+      host: "{{ drac }}"
+      port: 443
+      delay: 120
+    delegate_to: "{{ groups['controller'][0] }}"
+
+  - name: Sleep for 60 seconds
+    ansible.builtin.wait_for:
+      timeout: 120
+    delegate_to: "{{ groups['controller'][0] }}"
+
+  - name: netboot esxi install (retry)
+    dellemc.openmanage.idrac_os_deployment:
+      idrac_ip: "{{ drac }}"
+      idrac_user: "{{ idrac_user }}"
+      idrac_password: "{{ idrac_password }}"
+      validate_certs: false
+      share_name: "{{ hostvars[nfs_server]['net_ip'] }}:{{ nfs_share }}"
+      iso_image:  "{{ esxi_iso | regex_replace('\\.iso', '') }}-{{ inventory_hostname_short }}.iso"
+      expose_duration: 60
+    delegate_to: "{{ groups['controller'][0] }}"
+
+...

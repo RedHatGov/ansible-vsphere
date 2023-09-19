@@ -1,0 +1,128 @@
+---
+# tasks file for esxi_vcenter
+
+- name: copy vcenter iso to nfs share
+  ansible.builtin.copy:
+    src: "{{ vcenter_iso }}"
+    dest: "{{ nfs_share }}/{{ vcenter_iso }}"
+
+- name: mount vcsa iso
+  ansible.posix.mount:
+    path: "/mnt"
+    src: "{{ nfs_share }}/{{ vcenter_iso }}"
+    fstype: "iso9660"
+    state: "ephemeral"
+
+- name: find vcsa file
+  ansible.builtin.find:
+    paths: "/mnt/vcsa"
+    patterns: '*.ova'
+  register: file_list
+
+- name: copy ova to nfs share
+  ansible.builtin.copy:
+    src: "{{ file_list.files[0].path }}"
+    dest: "{{ nfs_share }}/{{ vcenter_ova }}"
+    remote_src: true
+
+- name: unmount esxi iso image
+  ansible.posix.mount:
+    path: "/mnt"
+    state: "unmounted"
+
+- name: deploy vcenter
+  community.vmware.vmware_deploy_ovf:
+    hostname: "{{ vcenter_host }}"
+    username: "{{ esxi_user }}"
+    password: "{{ esxi_pass }}"
+
+    name: "{{ vcenter_name }}"
+    datastore: "{{ vcenter_host_short }}:local"
+#        datastore: "{{ nfs_name }}"
+    disk_provisioning: "thin"
+
+    ovf: "{{ nfs_share }}/{{ vcenter_ova }}"
+    wait_for_ip_address: true
+    validate_certs: false
+    inject_ovf_env: true
+    properties:
+      'NetworkMapping.Network 1': 'Management Network'
+      DeploymentOption.value: "{{ vcenter_size }}"
+      guestinfo.cis.appliance.net.addr.family: "ipv4"
+      guestinfo.cis.appliance.net.mode: "static"
+      guestinfo.cis.appliance.net.addr: "{{ vcenter_ip }}"
+      guestinfo.cis.appliance.net.pnid: "{{ vcenter_fqdn }}"
+      guestinfo.cis.appliance.net.prefix: "{{ net_prefix }}"
+      guestinfo.cis.appliance.net.gateway: "{{ net_gateway }}"
+      guestinfo.cis.appliance.net.dns.servers: "{{ dns_ns | join(',') }}"
+      guestinfo.cis.appliance.root.passwd: "{{ esxi_pass }}"
+      guestinfo.cis.ceip_enabled: "False"
+      guestinfo.cis.deployment.autoconfig: "True"
+      guestinfo.cis.vmdir.password: "{{ esxi_pass }}"
+      domain: "{{ dns_domain }}"
+      searchpath: "{{ dns_domain }}"
+
+- name: Wait for vCenter
+  community.vmware.vmware_about_info:
+    hostname: "{{ vcenter_fqdn }}"
+    username: "administrator@vsphere.local"
+    password: "{{ esxi_pass }}"
+    validate_certs: no
+  retries: 30
+  delay: 60
+  register: result
+  until: result is succeeded
+
+- name: Add a new vCenter license
+  community.vmware.vcenter_license:
+    hostname: "{{ vcenter_fqdn }}"
+    username: "administrator@vsphere.local"
+    password: "{{ esxi_pass }}"
+    validate_certs: no
+    license: "{{ vcenter_license }}"
+    state: present
+
+- name: Create Datacenter
+  community.vmware.vmware_datacenter:
+    hostname: "{{ vcenter_fqdn }}"
+    username: "administrator@vsphere.local"
+    password: "{{ esxi_pass }}"
+    validate_certs: no
+    datacenter_name: '{{ datacenter_name }}'
+    state: present
+
+- name: Create Cluster
+  community.vmware.vmware_cluster:
+    hostname: "{{ vcenter_fqdn }}"
+    username: "administrator@vsphere.local"
+    password: "{{ esxi_pass }}"
+    validate_certs: no
+    datacenter_name: '{{ datacenter_name }}'
+    cluster_name: "{{ cluster_name }}"
+
+- name: Add ESXi Hosts to vCenter
+  community.vmware.vmware_host:
+    hostname: "{{ vcenter_fqdn }}"
+    username: "administrator@vsphere.local"
+    password: "{{ esxi_pass }}"
+    validate_certs: no
+    datacenter_name: '{{ datacenter_name }}'
+    cluster: "{{ cluster_name }}"
+    esxi_hostname: "{{ item }}"
+    esxi_username: '{{ esxi_user }}'
+    esxi_password: '{{ esxi_pass }}'
+    state: present
+  loop: "{{ groups['esxi'] }}"
+
+- name: Add ESXi license and assign to the ESXi host
+  community.vmware.vcenter_license:
+    hostname: "{{ vcenter_fqdn }}"
+    username: "administrator@vsphere.local"
+    password: "{{ esxi_pass }}"
+    validate_certs: false
+    esxi_hostname: '{{ item }}'
+    license: "{{ esxi_license }}"
+    state: present
+  loop: "{{ groups['esxi'] }}"
+
+...

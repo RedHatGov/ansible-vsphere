@@ -1,0 +1,105 @@
+---
+# tasks file for esxi_config
+
+- debug:
+    msg: "*** IMPORTANT ***: It will take up to 15 minutes for the ESXi build to complete. Please be patient."
+  run_once: true
+
+- name: Wait for esxi hosts to come back
+  ansible.builtin.wait_for:
+    host: "{{ inventory_hostname }}"
+    port: 443
+    timeout: 1200
+  delegate_to: "{{ groups['controller'][0] }}"
+
+- name: Delay to give settle time
+  ansible.builtin.wait_for:
+    timeout: 60
+  delegate_to: "{{ groups['controller'][0] }}"
+
+- name: Gather info about vmnics of an ESXi Host
+  community.vmware.vmware_host_vmnic_info:
+    hostname: '{{ inventory_hostname }}'
+    username: '{{ esxi_user }}'
+    password: '{{ esxi_pass }}'
+    esxi_hostname: '{{ inventory_hostname }}'
+    validate_certs: false
+  delegate_to: "{{ groups['controller'][0] }}"
+  register: host_vmnics
+
+- name: determine the correct vnic to use for intra-cluster communications
+  set_fact:
+    vmnic: |
+      {% for vmnic_detail in host_vmnics.hosts_vmnics_info[inventory_hostname_short + '.'].vmnic_details %}
+      {% if vmnic_detail.mac == vmnet_mac %}
+      {{ vmnic_detail.device }}
+      {% endif %}
+      {% endfor %}
+
+- set_fact:
+    vmnic: "{{ vmnic | trim }}"
+
+- name: Add a VMware vSwitch
+  community.vmware.vmware_vswitch:
+    hostname: '{{ inventory_hostname }}'
+    username: '{{ esxi_user }}'
+    password: '{{ esxi_pass }}'
+    switch: "{{ vswitch_name }}"
+    nics: "{{ vmnic }}"
+    mtu: 9000
+    validate_certs: false
+  delegate_to: "{{ groups['controller'][0] }}"
+
+- name: Add Management Network VM Portgroup
+  community.vmware.vmware_portgroup:
+    hostname: "{{ inventory_hostname }}"
+    username: "{{ esxi_user }}"
+    password: "{{ esxi_pass }}"
+    switch: "{{ vswitch_name }}"
+    portgroup: "{{ portgroup_name }}"
+    hosts: "{{ inventory_hostname }}"
+    validate_certs: false
+  delegate_to: "{{ groups['controller'][0] }}"
+
+- name: Add Management vmkernel port using static network type
+  community.vmware.vmware_vmkernel:
+    hostname: "{{ inventory_hostname }}"
+    username: "{{ esxi_user }}"
+    password: "{{ esxi_pass }}"
+    esxi_hostname: "{{ inventory_hostname }}"
+    vswitch_name: "{{ vswitch_name }}"
+    portgroup_name: "{{ portgroup_name }}"
+    network:
+      type: 'static'
+      ip_address: "{{ vmnet_ip }}"
+      subnet_mask: "{{ vmnet_netmask }}"
+    state: present
+    enable_ft: true
+    enable_mgmt: true
+    enable_provisioning: true
+    enable_provisioning: true
+    enable_replication: true
+    enable_replication_nfc: true
+    enable_vmotion: true
+    enable_vsan: true
+    validate_certs: false
+  delegate_to: "{{ groups['controller'][0] }}"
+
+- name: Mount NFS v4.1 datastores to ESXi
+  community.vmware.vmware_host_datastore:
+    hostname: "{{ inventory_hostname }}"
+    username: "{{ esxi_user }}"
+    password: "{{ esxi_pass }}"
+    validate_certs: false
+    datastore_name: '{{ item.name }}'
+    datastore_type: '{{ item.type }}'
+    nfs_server: '{{ item.server }}'
+    nfs_path: '{{ item.path }}'
+    nfs_ro: false
+    esxi_hostname: '{{ inventory_hostname }}'
+    state: present
+  loop:
+      - { 'name': "{{ nfs_name }}", 'server': "{{ nfs_server }}", 'path': "{{ nfs_share }}", 'type': 'nfs41'}
+  delegate_to: "{{ groups['controller'][0] }}"
+
+...

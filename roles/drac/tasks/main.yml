@@ -1,0 +1,57 @@
+---
+# tasks file for drac
+
+- include_role:
+    name: ssh_fingerprint_connect
+    apply:
+      delegate_to: 127.0.0.1
+
+- name: install pip
+  package:
+    name: python3-pip
+    state: latest
+  delegate_to: 127.0.0.1
+  run_once: true
+  become: true
+
+- name: install omsdk
+  ansible.builtin.pip:
+    name: omsdk
+  run_once: true
+  delegate_to: 127.0.0.1
+
+- name: Get system inventory
+  dellemc.openmanage.idrac_system_info:
+    idrac_ip: "{{ inventory_hostname }}"
+    idrac_user: "{{ idrac_user }}"
+    idrac_password: "{{ idrac_user }}"
+    validate_certs: false
+  delegate_to: 127.0.0.1
+  register: system_info
+
+- name: Get installed firmware inventory
+  dellemc.openmanage.idrac_firmware_info:
+    idrac_ip: "{{ inventory_hostname }}"
+    idrac_user: "{{ idrac_user }}"
+    idrac_password: "{{ idrac_user }}"
+    validate_certs: false
+  delegate_to: 127.0.0.1
+  register: firmware_info
+
+- name: Update firmware from repository
+  dellemc.openmanage.idrac_firmware:
+    idrac_ip: "{{ inventory_hostname }}"
+    idrac_user: "{{ idrac_user }}"
+    idrac_password: "{{ idrac_user }}"
+    share_name: "https://downloads.dell.com"
+    reboot: True
+    job_wait: True
+    apply_update: True
+    validate_certs: false
+  delegate_to: 127.0.0.1
+  register: firmware
+
+- debug:
+    var: firmware
+
+...

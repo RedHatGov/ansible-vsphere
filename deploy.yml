@@ -2,23 +2,52 @@
 
 ##################################################
 # this updates drac firmware
-- import_playbook: drac.yml
-  when: drac is defined
-##################################################
+#
+- name: update drac to latest firmware version
+  hosts: drac
+  gather_facts: false
+  become: false
+
+  roles:
+    - role: drac
+      when: drac is defined
+
+- name: configure management host
+  hosts: "{{ groups['controller'][0] }}"
+  gather_facts: false
+  become: true
+
+  roles:
+# this verifies ssh keys for initial connections
+    - role: ssh_fingerprint_connect
 # this configures the management host (the controller, usually) to manage vsphere
-- import_playbook: mgmt-config.yml
+    - role: mgmt_config
 # this creates and populates the nfs server on the management host
-- import_playbook: nfs.yml
+    - role: nfs
+
+- name: configure esxi
+  hosts: esxi
+  gather_facts: false
+  become: true
+
+  roles:
 # this creates the custom esxi installation isos with custom kickstarts
-- import_playbook: iso.yml
+    - role: iso
 ##################################################
 # ONLY RUN THIS WHEN YOU WANT TO WIPE YOUR SERVERS
-- import_playbook: esxi-provision.yml
-  when: wipe is defined
 ##################################################
+    - role: esxi_provision
+      when: wipe is defined
 # this configures the provisioned esxi hosts
-- import_playbook: esxi-config.yml
+    - role: esxi_config
+
+- name: deploy vcenter and configure cluster
+  hosts: "{{ groups['controller'][0] }}"
+  gather_facts: true
+  become: true
+
+  roles:
 # this deploys and configures vcenter and creates the datacenter and cluster
-- import_playbook: esxi-vcenter.yml
+    - role: esxi_vcenter
 
 ...
