@@ -29,6 +29,12 @@
   hosts: esxi
   gather_facts: false
   become: true
+  vars:
+    # this is domain user params
+    user_name: user01
+    user_password: P@ssW0rd!
+    user_first_name: user01
+    user_last_name: user01
 
   roles:
 # this creates the custom esxi installation isos with custom kickstarts

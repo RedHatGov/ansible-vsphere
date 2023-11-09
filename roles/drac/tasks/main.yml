@@ -24,25 +24,31 @@
   dellemc.openmanage.idrac_system_info:
     idrac_ip: "{{ inventory_hostname }}"
     idrac_user: "{{ idrac_user }}"
-    idrac_password: "{{ idrac_user }}"
+    idrac_password: "{{ idrac_password }}"
     validate_certs: false
   delegate_to: 127.0.0.1
   register: system_info
+
+- debug:
+    var: system_info
 
 - name: Get installed firmware inventory
   dellemc.openmanage.idrac_firmware_info:
     idrac_ip: "{{ inventory_hostname }}"
     idrac_user: "{{ idrac_user }}"
-    idrac_password: "{{ idrac_user }}"
+    idrac_password: "{{ idrac_password }}"
     validate_certs: false
   delegate_to: 127.0.0.1
   register: firmware_info
+
+- debug:
+    var: firmware_info
 
 - name: Update firmware from repository
   dellemc.openmanage.idrac_firmware:
     idrac_ip: "{{ inventory_hostname }}"
     idrac_user: "{{ idrac_user }}"
-    idrac_password: "{{ idrac_user }}"
+    idrac_password: "{{ idrac_password }}"
     share_name: "https://downloads.dell.com"
     reboot: True
     job_wait: True

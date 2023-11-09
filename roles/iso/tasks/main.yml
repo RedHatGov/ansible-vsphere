@@ -28,6 +28,11 @@
         path: "/dev/shm/esxibuilder/{{ inventory_hostname_short }}/isobuild"
         state: directory
 
+    - setup:
+
+    - debug:
+        msg: "net_ip: {{ net_ip }} drac: {{ drac }} vmnet_ip: {{ vmnet_ip }} vmnet_mac: {{ vmnet_mac }} install_hdd: {{ install_hdd }} vmfs_hdd: {{ vmfs_hdd }} vmnet_nic: {{ vmnet_nic }} vmnet_mac: {{ vmnet_mac }}"
+
     - name: add esxi kickstart configuration
       ansible.builtin.template:
         src: "kickstart.cfg.j2"
