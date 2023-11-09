@@ -1,33 +1,38 @@
 ---
 
+# external network that all hosts are attached to
 net_gateway: "1.1.1.1"
 net_netmask: "255.255.255.0"
 net_prefix: "24"
-
-vswitch_name: "vmnet switch"
-portgroup_name: "vmnet port group"
-vmnet_netmask: "255.255.255.0"
-
-nfs_clients: "1.2.3.0/24"
-nfs_server: "nfs.server.com"
-nfs_share: "/export"
-nfs_name: "nfs.server.com:export"
-
-idrac_user: "drac_user"
-idrac_password: "drac_password"
-
 dns_domain: "server.com"
 dns_ns:
   - "1.1.1.2"
   - "1.1.1.3"
 
-user_rootpw: "<encrypted password goes here>"
+# internal vswitch for cluster interconnection
+vswitch_name: "vmnet switch"
+portgroup_name: "vmnet port group"
+vmnet_netmask: "255.255.255.0"
 
+# nfs server for provisioning esxi via kickstart from iso
+nfs_clients: "1.2.3.0/24"
+nfs_server: "nfs.server.com"
+nfs_share: "/export"
+nfs_name: "nfs.server.com:export"
+
+# dell idrac credentials
+idrac_user: "drac_user"
+idrac_password: "drac_password"
+
+# esxi installation data
 esxi_iso: "VMware-VMvisor-Installer-7.0U3g-20328353.x86_64.iso"
 esxi_user: "root"
 esxi_pass: "<esxi root password goes here>"
 esxi_license: "<esxi license key goes here>"
+# esxi_pass exceypted: openssl passwd -6
+user_rootpw: "<encrypted password goes here>"
 
+# vcenter installation data
 vcenter_iso: "VMware-VCSA-all-7.0.3-20990077.iso"
 vcenter_ova: "{{ vcenter_iso | regex_replace('\\.iso$', '.ova') }}"
 vcenter_name: "vcenter"
@@ -37,9 +42,7 @@ vcenter_ip: "1.1.1.4"
 vcenter_fqdn: "vcenter.server.com"
 vcenter_size: "tiny"
 vcenter_license: "<vcenter license key goes here>"
-
 datacenter_name: "datacenter"
-
 cluster_name: "cluster"
 
 ...
